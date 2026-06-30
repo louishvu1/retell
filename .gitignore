@@ -1,0 +1,27 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Environment — NEVER commit secrets
+.env
+.env.local
+.env.production
+
+# Database (local data — not for git)
+data/
+*.db
+*.db-shm
+*.db-wal
+
+# TypeScript cache
+*.tsbuildinfo
+
+# OS noise
+.DS_Store
+Thumbs.db
+
+# Editor config
+.vscode/
+.idea/
