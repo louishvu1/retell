@@ -1,15 +1,39 @@
 /**
  * services/square/SquareClient.ts
- * Thin wrapper around the Square SDK that injects the correct access token
- * for a given client.
+ * Factory functions for creating Square SDK Client instances.
  *
- * Responsibilities:
- *   - Accept a client's Square access token.
- *   - Expose typed methods for the Square APIs we use
- *     (Catalog, Team, Bookings, Customers).
- *   - Handle token refresh transparently when a 401 is received.
- *   - Translate Square SDK errors into application-level errors.
+ * Keeps the SDK instantiation in one place so the environment config
+ * (sandbox vs production) is never scattered across the codebase.
  *
- * Implementation: next session.
+ * Two flavours:
+ *   createSquareClient(token)  — for API calls on behalf of a business
+ *   createSquareOAuthClient()  — for the OAuth token exchange (no token needed)
  */
-export {};
+
+import { Client, Environment } from 'square';
+import { config } from '../../config';
+
+export type SquareEnvironment = 'sandbox' | 'production';
+
+/** Create an authenticated Square client for a specific business's access token. */
+export function createSquareClient(accessToken: string): Client {
+  const environment =
+    config.SQUARE_ENVIRONMENT === 'production'
+      ? Environment.Production
+      : Environment.Sandbox;
+
+  return new Client({ accessToken, environment });
+}
+
+/**
+ * Create a Square client for the OAuth token exchange.
+ * No access token is required at this point — we're obtaining one.
+ */
+export function createSquareOAuthClient(): Client {
+  const environment =
+    config.SQUARE_ENVIRONMENT === 'production'
+      ? Environment.Production
+      : Environment.Sandbox;
+
+  return new Client({ environment });
+}

@@ -1,10 +1,13 @@
 /**
  * routes/health.routes.ts
- * Simple health check endpoint used by hosting platforms and monitoring.
- *
  * GET /health
- *   Returns 200 { status: "ok", timestamp: "..." }
- *
- * Implementation: next session.
+ * Used by Railway, uptime monitors, and load balancers to confirm the server is alive.
  */
-export {};
+
+import { Router } from 'express';
+
+export const healthRouter = Router();
+
+healthRouter.get('/health', (_req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});

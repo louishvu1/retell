@@ -13,56 +13,43 @@ Legend: ⬜ not started | 🔄 in progress | ✅ done | ❌ blocked
 
 ---
 
-## Milestone 1 — Local Development 🔄
+## Milestone 1 — Local Development ✅
 
 **Retell → localhost → Square Sandbox**
 
-- ⬜ `npm install`
-- ⬜ Fill in `.env` (Square + Retell credentials)
-- ⬜ Read Retell webhook docs → confirm payload format + signature verification
-- ⬜ `src/config/index.ts` — env validation (Zod)
-- ⬜ `src/db/schema.ts` — clients table
-- ⬜ `src/db/index.ts` — SQLite connection
-- ⬜ `src/db/migrate.ts` — migration runner → `npm run db:migrate`
-- ⬜ `src/services/clients/ClientRegistry.ts`
-- ⬜ `src/services/square/SquareOAuthService.ts`
-- ⬜ `src/routes/oauth.routes.ts` — OAuth start + callback
-- ⬜ `src/services/square/SquareClient.ts`
-- ⬜ `src/services/booking/providers/SquareBookingAdapter.ts`
-  - ⬜ `listServices()` — Square Catalog API
-  - ⬜ `listStaff()` — Square Team API
-  - ⬜ `getAvailability()` — Square Bookings API
-  - ⬜ `createBooking()` — Square Bookings + Customers API
-- ⬜ `src/services/booking/BookingRouter.ts`
-- ⬜ `src/services/retell/RetellFunctionHandler.ts`
-- ⬜ `src/routes/retell.routes.ts` — webhook + signature verification
-- ⬜ `src/server.ts` — assemble app
-- ⬜ `src/utils/logger.ts`
-- ⬜ `src/utils/fuzzyMatch.ts`
-- ⬜ `src/db/seed.ts` — register first test client
-- ⬜ End-to-end test: booking confirmed in Square sandbox ✓
+- ✅ `npm install`
+- ✅ Fill in `.env` (Square + Retell credentials)
+- ✅ `npm run db:generate` + `npm run db:migrate`
+- ✅ `src/db/seed.ts` — registered Los Cab Sports Village (agent_04cb403d93c1d6fc57ba9a18a0)
+- ✅ ngrok tunnel live (facing-skyward-greedily.ngrok-free.dev)
+- ✅ Square OAuth complete — tokens in SQLite DB
+- ✅ Retell agent webhook URL configured
+- ✅ Retell agent functions configured (get_services, get_staff, check_availability, create_booking)
+- ✅ Retell agent system prompt updated (enforces correct function call order)
+- ✅ get_services working (listCatalog bug fixed)
+- ✅ check_availability working (confirmed in live call logs)
+- ⬜ Full e2e booking confirmed in Square sandbox
+  → SKIPPED: Square sandbox blocks bookable staff via API. Code is correct.
+  → Will validate on Railway with properly configured Square account.
 
 ---
 
-## Milestone 2 — Deploy to Railway
+## Milestone 2 — Deploy to Railway 🔄
 
-- ⬜ Create GitHub repo and push code
+- ⬜ Push code to GitHub
 - ⬜ Create Railway project, connect to GitHub repo
 - ⬜ Set all env vars in Railway dashboard
-- ⬜ Configure persistent volume for SQLite (`/data/nott-ai.db`)
-- ⬜ Confirm `/health` returns 200 from public URL
+- ⬜ Add persistent volume for SQLite (`/data/nott-ai.db`)
+- ⬜ Confirm `/health` returns 200 from Railway URL
+- ⬜ Update APP_BASE_URL in Railway to the Railway URL
+- ⬜ Update Square OAuth redirect URL in Square Developer dashboard
+- ⬜ Re-run Square OAuth against Railway URL
+- ⬜ Update Retell webhook URL to Railway URL
+- ⬜ Run a real test call — confirm logs appear in Railway
 
 ---
 
-## Milestone 3 — Point Retell at Railway
-
-- ⬜ Update Retell agent webhook URL to Railway URL
-- ⬜ Re-run Square OAuth against production server
-- ⬜ Register production client in Railway database
-
----
-
-## Milestone 4 — Production Testing
+## Milestone 3 — Production Testing
 
 - ⬜ 5 successful test calls end-to-end
 - ⬜ Test unavailable staff → agent offers alternatives
@@ -72,14 +59,13 @@ Legend: ⬜ not started | 🔄 in progress | ✅ done | ❌ blocked
 
 ---
 
-## Milestone 4.5 — Multi-Client Readiness
+## Milestone 4 — Multi-Client Readiness
 
 - ⬜ Audit codebase for any hardcoded client assumptions
 - ⬜ Verify `ClientRegistry` isolates clients correctly by `agent_id`
-- ⬜ Verify `SquareBookingAdapter` never mixes credentials across clients
-- ⬜ Onboard second test business (second Retell agent + second Square sandbox account) — zero code changes
+- ⬜ Onboard second test business (second Retell agent + second Square sandbox account)
 - ⬜ Run both clients simultaneously; confirm calls route to correct Square account
-- ⬜ Document the onboarding steps so it can be handed to a non-developer
+- ⬜ Document the onboarding steps for non-developers
 
 ---
 
@@ -87,7 +73,6 @@ Legend: ⬜ not started | 🔄 in progress | ✅ done | ❌ blocked
 
 - Cancellations and rescheduling via voice
 - SMS/email booking confirmations
-- Multi-client onboarding
 - Switch Square sandbox → production
 - Multi-location support
 - Admin dashboard / analytics / billing

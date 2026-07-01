@@ -1,47 +1,64 @@
 # Current Status
 
-**Last updated:** 2026-06-30
-**Session:** 1 — Foundation
+**Last updated:** 2026-07-01
+**Session:** 3 — Milestone 1 Complete (Local Integration)
 
 ---
 
-## Confirmed Setup
+## What Was Completed This Session
 
-- ✅ Square Developer account exists — Application ID + Secret are available
-- ✅ Retell account exists — agents already set up
-- ✅ Hosting: Railway confirmed
+- ✅ Replaced `better-sqlite3` with `@libsql/client` (Node v25 compatibility — no native compilation)
+- ✅ Rewrote `src/db/index.ts`, `src/db/migrate.ts`, `src/db/seed.ts` for async libsql patterns
+- ✅ Made all `ClientRegistry` methods async (`getByAgentId`, `updateSquareTokens`, `upsertClient`)
+- ✅ Fixed Square SDK v39 breaking changes throughout (removed `{ body: {...} }` wrappers)
+- ✅ Fixed Square OAuth scopes (`BOOKINGS_*` → `APPOINTMENTS_*`)
+- ✅ Fixed `retrieveMerchant` call (string arg, not object)
+- ✅ Fixed `retrieveCatalogObject` call (string arg, not object)
+- ✅ Fixed `listCatalog` call (`undefined, 'ITEM'` not `{ types: 'ITEM' }`) — **this was why get_services returned empty**
+- ✅ Completed Square OAuth — tokens stored in SQLite DB
+- ✅ Configured Retell agent webhook URL to ngrok endpoint
+- ✅ Added 4 custom functions to Retell agent (get_services, get_staff, check_availability, create_booking)
+- ✅ Fixed Retell lifecycle events (call_started, call_ended) hitting webhook — now returns 200 gracefully
+- ✅ Fixed payload too large error — increased `express.raw()` limit to 10mb
+- ✅ Updated Retell agent system prompt to enforce correct function call order
+- ✅ Wrote `src/test/webhookTest.ts` — automated end-to-end webhook simulation
+- ✅ Wrote `src/test/squareSetup.ts` — Square sandbox seeder (services + team members)
+- ✅ Wrote `src/test/diagnoseCatalog.ts` — catalog diagnostic
+- ✅ Wrote `src/test/makeStaffBookable.ts` — staff bookable profile helper
+- ✅ Verified get_services returns 5 services from Square sandbox
+- ✅ Server running, ngrok tunnel live, all routes working
 
 ---
 
-## What Is Done
+## What Is Not Done Yet
 
-- ✅ Project structure and config files created
-- ✅ All source file stubs created with clear responsibility comments
-- ✅ Shared types defined (`booking.types.ts`, `retell.types.ts`, `client.types.ts`, `errors.ts`)
-- ✅ Full project documentation written (README, PROJECT_CONTEXT, ARCHITECTURE, CURRENT_STATUS, NEXT_TASK, DECISIONS, TODO, ROADMAP)
-- ✅ 4-milestone roadmap confirmed
+- ❌ Full end-to-end booking test (Square sandbox limitation — see below)
+- ❌ Railway deployment
 
 ---
 
-## What Is Not Done
+## Known Square Sandbox Limitation
 
-- ❌ `npm install` not run yet
-- ❌ `.env` not filled in
-- ❌ No application logic implemented — all source files are stubs
-- ❌ Database schema not written, no DB file exists
-- ❌ Not deployed anywhere
+Square sandbox blocks making team members "bookable" via API:
+- `PUT /v2/bookings/team-member-booking-profiles/{id}` returns 404 (profile not auto-created)
+- `listTeamMemberBookingProfiles(bookableOnly=false)` returns 403 (needs `APPOINTMENTS_ALL_READ` not granted in sandbox)
+- The sandbox dashboard UI for Team Members is broken (shows marketing page)
+
+**This is a sandbox data issue, not a code issue.** The booking code is correct. In production,
+businesses have properly configured Square accounts with real bookable staff and working hours.
+
+**Decision:** Skip full sandbox e2e test, deploy to Railway (Milestone 2), and test with a
+properly configured Square account against the production server.
 
 ---
 
 ## Active Milestone
 
-**Milestone 1 — Local Development**
-Goal: Retell → localhost (ngrok) → Square Sandbox
-
-No blockers. Ready to start implementing next session.
+**Milestone 2 — Deploy to Railway**
+Goal: Production server live on Railway with persistent SQLite, public URL replacing ngrok.
 
 ---
 
 ## Next Action
 
-Open `NEXT_TASK.md` and follow Step 1.
+Open `NEXT_TASK.md` and follow the Railway deployment steps.

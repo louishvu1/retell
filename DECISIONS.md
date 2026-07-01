@@ -76,7 +76,7 @@ A log of key decisions made during development. Each entry explains what was dec
 ## DEC-005 — In-memory session state (not DB-persisted)
 
 **Date:** 2026-06-30
-**Status:** Proposed (to be confirmed next session)
+**Status:** Accepted (implemented)
 
 **Decision:** During a multi-turn booking conversation, hold intermediate state (chosen service, chosen staff, chosen time) in an in-memory Map keyed by `call_id`.
 
@@ -91,17 +91,24 @@ A log of key decisions made during development. Each entry explains what was dec
 
 ---
 
-## DEC-006 — Verify Retell webhook signatures
+## DEC-006 — Retell webhook signature verification
 
 **Date:** 2026-06-30
-**Status:** Pending (implementation in next session)
+**Status:** Accepted (implemented)
 
 **Decision:** Reject any request to `/webhook/retell` that does not carry a valid Retell signature.
 
 **Reasoning:**
 - Without this, anyone who discovers the URL can send fake booking requests.
-- Retell provides a signing secret and signature header.
-- Must verify the exact signature mechanism against Retell docs before implementing.
+- Retell's SDK provides `Retell.verify(rawBody, RETELL_API_KEY, signature)`.
+- The `x-retell-signature` header uses HMAC-SHA256 with the API key.
+
+**Implementation detail:** The webhook route uses `express.raw()` instead of `express.json()`.
+The raw bytes are required for HMAC verification — re-parsing JSON changes whitespace
+and breaks the signature check. Do NOT add `express.json()` globally.
+
+**Key finding from docs:** Signature verification uses `RETELL_API_KEY` (NOT a separate
+webhook secret). The API key must have the "webhook badge" in the Retell dashboard.
 
 ---
 
@@ -116,3 +123,61 @@ A log of key decisions made during development. Each entry explains what was dec
 - Consistent with project instructions (no auth systems beyond Square OAuth).
 - The backend is not user-facing; it only receives Retell webhooks and handles OAuth callbacks.
 - A business owner goes through OAuth once during setup. After that, everything is automated.
+
+---
+
+## DEC-008 — Square service IDs are ITEM_VARIATION IDs
+
+**Date:** 2026-06-30
+**Status:** Accepted (implemented)
+
+**Decision:** When listing services, return the ITEM_VARIATION ID (not the ITEM ID) as the service ID throughout the booking conversation.
+
+**Reasoning:**
+- Square's availability search (`searchAvailability`) requires a `serviceVariationId` (ITEM_VARIATION), not an ITEM ID.
+- Square's booking creation also requires `serviceVariationId` + `serviceVariationVersion`.
+- The LLM receives variation IDs as "service IDs", and passes them back in subsequent calls.
+- The LLM doesn't know or care about the distinction — it's transparent to the conversation.
+
+**Implication:** When calling `createBooking`, the adapter does a `retrieveCatalogObject` to get the current version for optimistic locking. This adds one extra API call but is required by Square.
+
+---
+
+## DEC-010 — Skip full Square sandbox e2e test, deploy to Railway instead
+
+**Date:** 2026-07-01
+**Status:** Accepted
+
+**Decision:** Do not block Milestone 2 on completing a full e2e booking in the Square sandbox. Deploy to Railway and validate the full flow there against a properly configured Square account.
+
+**Reasoning:**
+- Square sandbox blocks making team members "bookable" via API (404 on booking profile PUT, 403 on profile list)
+- The sandbox dashboard UI for team management is broken (shows onboarding marketing page)
+- All other parts of the stack are proven working: get_services, check_availability, webhook routing, OAuth
+- The booking code (createBooking, findOrCreateCustomer) is correct — it's a data issue, not a code issue
+- Railway deployment was the planned next step anyway
+
+**What was proven locally:**
+- get_services returns real Square catalog data ✅
+- check_availability is called correctly by the Retell agent ✅
+- Webhook signature verification works ✅
+- OAuth flow complete with tokens stored in DB ✅
+
+---
+
+## DEC-009 — Per-route body parsing (not global express.json)
+
+**Date:** 2026-06-30
+**Status:** Accepted (implemented)
+
+**Decision:** No global body parsing middleware. Each route applies its own body handling.
+
+**Routes:**
+- `POST /webhook/retell` → `express.raw({ type: 'application/json' })` (HMAC requires raw bytes)
+- `GET /oauth/square/start` → no body (query params only)
+- `GET /oauth/square/callback` → no body (query params only)
+- `GET /health` → no body
+
+**Reasoning:** Since all endpoints are either GETs or the webhook (which needs raw body),
+there is no need for global JSON body parsing. This avoids accidentally breaking HMAC
+verification if someone adds `express.json()` globally later.

@@ -2,27 +2,35 @@
  * services/retell/retell.types.ts
  * Types for inbound Retell webhook payloads.
  *
- * These reflect the actual shape of Retell's function-call webhook.
- * Verify against https://docs.retellai.com before implementing.
+ * Verified against https://docs.retellai.com/build/single-multi-prompt/custom-function
+ *
+ * REAL payload shape (when "Payload: args only" is OFF — our default):
+ *   { name, args, call: { call_id, agent_id, ... } }
+ *
+ * The original stub was wrong: call_id/agent_id are nested inside `call`,
+ * and arguments is called `args`.
  */
 
-/** Payload Retell sends when calling a custom function. */
-export interface RetellFunctionCallPayload {
-  /** Unique ID for the call session. Used to maintain session state. */
+/** Partial shape of the call object Retell includes for context. */
+export interface RetellCallContext {
+  /** Stable across all function calls in one conversation. Used for session state. */
   call_id: string;
-  /** The Retell agent that triggered this call. Used to identify the client. */
+  /** The Retell agent handling this call. Used to look up the business client. */
   agent_id: string;
-  /** The name of the function the agent wants to call. */
-  name: string;
-  /** The arguments the agent passed to the function. Shape varies by function. */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  arguments: Record<string, any>;
+  /** Live transcript up to the moment this function was triggered. */
+  transcript?: string;
+  [key: string]: unknown;
 }
 
-/** What we return to Retell after processing a function call. */
-export interface RetellFunctionResult {
-  /** A string the LLM will receive as the function result. JSON-stringify complex objects. */
-  result: string;
+/** Payload Retell POSTs to our webhook for each custom function call. */
+export interface RetellFunctionCallPayload {
+  /** The name of the function the agent wants to invoke. */
+  name: string;
+  /** The arguments the LLM resolved for this call. Shape varies by function name. */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  args: Record<string, any>;
+  /** Context about the ongoing call, including call_id and agent_id. */
+  call: RetellCallContext;
 }
 
 /** Function names the Retell agent is configured to call. */

@@ -1,18 +1,19 @@
 /**
  * services/booking/BookingRouter.ts
- * The provider-agnostic booking interface.
+ * Provider-agnostic booking interface. The only booking abstraction the
+ * rest of the application touches.
  *
- * The BookingRouter is the ONLY thing that the rest of the application
- * talks to for booking operations. It does not know or care whether the
- * underlying provider is Square, Acuity, Mindbody, or anything else.
+ * Selecting a provider works like this:
+ *   1. The webhook gives us the client's bookingProvider ('square').
+ *   2. BookingRouter.getProvider(client) returns the correct adapter.
+ *   3. The adapter implements BookingProvider, so the caller doesn't care
+ *      whether it's Square or anything else.
  *
- * Each client has an associated provider (currently always "square").
- * The router selects the correct adapter and delegates.
- *
- * Adding a new booking provider = adding a new adapter in ./providers/
- * and registering it here. Nothing else changes.
- *
- * Implementation: next session.
+ * Adding a new provider (e.g. Acuity):
+ *   1. Create src/services/booking/providers/AcuityBookingAdapter.ts
+ *   2. Implement BookingProvider
+ *   3. Add a case in getProvider() below
+ *   — Nothing else in the codebase changes.
  */
 
 import type {
@@ -23,6 +24,10 @@ import type {
   Service,
   StaffMember,
 } from './booking.types';
+import type { ClientConfig } from '../clients/client.types';
+import { SquareBookingAdapter } from './providers/SquareBookingAdapter';
+import { createSquareClient } from '../square/SquareClient';
+import { squareOAuthService } from '../square/SquareOAuthService';
 
 /** Every booking adapter must implement this interface. */
 export interface BookingProvider {
@@ -33,5 +38,60 @@ export interface BookingProvider {
 }
 
 export class BookingRouter {
-  // Implementation: next session.
+  /**
+   * Resolve the correct BookingProvider for a given client.
+   * Handles token refresh before returning the adapter.
+   */
+  async getProvider(client: ClientConfig): Promise<BookingProvider> {
+    switch (client.bookingProvider) {
+      case 'square': {
+        if (!client.squareLocationId) {
+          throw new Error(
+            `Client ${client.retellAgentId} has not completed Square OAuth (no locationId).`,
+          );
+        }
+        // getValidAccessToken refreshes the token automatically if it's expiring.
+        const accessToken = await squareOAuthService.getValidAccessToken(
+          client.retellAgentId,
+        );
+        const squareClient = createSquareClient(accessToken);
+        return new SquareBookingAdapter(squareClient, client.squareLocationId);
+      }
+
+      default:
+        throw new Error(
+          `Unknown booking provider: ${client.bookingProvider as string}`,
+        );
+    }
+  }
+
+  // ─── Convenience methods that resolve the provider and delegate ───────────
+
+  async listServices(client: ClientConfig): Promise<Service[]> {
+    const provider = await this.getProvider(client);
+    return provider.listServices();
+  }
+
+  async listStaff(client: ClientConfig): Promise<StaffMember[]> {
+    const provider = await this.getProvider(client);
+    return provider.listStaff();
+  }
+
+  async getAvailability(
+    client: ClientConfig,
+    req: AvailabilityRequest,
+  ): Promise<AvailableSlot[]> {
+    const provider = await this.getProvider(client);
+    return provider.getAvailability(req);
+  }
+
+  async createBooking(
+    client: ClientConfig,
+    req: BookingRequest,
+  ): Promise<BookingConfirmation> {
+    const provider = await this.getProvider(client);
+    return provider.createBooking(req);
+  }
 }
+
+export const bookingRouter = new BookingRouter();
